@@ -1667,70 +1667,11 @@ function thankRoutineBegin(snapshot) {
     TrialHandler.fromSnapshot(snapshot);
     
     // --- 1. Collect all experiment data properly ---
-    let allData = [];
-    
-    // Method 1: Use the official getTrialData() method
-    if (typeof psychoJS.experiment.getTrialData === 'function') {
-      allData = psychoJS.experiment.getTrialData();
-    }
-    
-    // Method 2: If getTrialData returns empty, try the internal _trialsData
-    if (allData.length === 0 && psychoJS.experiment._trialsData) {
-      allData = psychoJS.experiment._trialsData;
-    }
-    
-    // Method 3: Manually collect data from loops (preloop and testloop)
-    // This ensures we get all trial data even if the experiment state is odd
-    if (allData.length === 0) {
-      console.warn("No data from experiment methods, collecting from loops manually.");
-      // Collect from preloop
-      if (typeof preloop !== 'undefined' && preloop.trialList) {
-        for (let i = 0; i < preloop.trialList.length; i++) {
-          let trialData = preloop.trialList[i];
-          // Add any additional data recorded during the trial (like reaction times)
-          // You would need to store those in a global array during preRoutineEnd.
-          allData.push(trialData);
-        }
-      }
-      // Similarly for testloop
-      if (typeof testloop !== 'undefined' && testloop.trialList) {
-        for (let i = 0; i < testloop.trialList.length; i++) {
-          allData.push(testloop.trialList[i]);
-        }
-      }
-    }
-    
-    // If still empty, create a minimal record with at least the participant info
-    if (allData.length === 0) {
-      console.error("CRITICAL: No trial data found. Saving empty placeholder.");
-      allData = [{
-        "班別學號 (e.g., 1a01)": expInfo["班別學號 (e.g., 1a01)"],
-        "date": expInfo["date"],
-        "expName": expName,
-        "error": "No trial data recorded"
-      }];
-    }
-    
-    // --- 2. Convert to CSV ---
-    const headers = Object.keys(allData[0]);
-    const csvRows = [];
-    csvRows.push(headers.join(','));
-    for (const row of allData) {
-      const values = headers.map(header => {
-        let val = row[header];
-        if (val === undefined || val === null) val = '';
-        // Escape commas and quotes
-        if (typeof val === 'string') {
-          val = val.replace(/"/g, '""');
-          if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-            val = `"${val}"`;
-          }
-        }
-        return val;
-      });
-      csvRows.push(values.join(','));
-    }
-    const csvData = csvRows.join('\n');
+    let dataObj = psychoJS._experiment._trialsData;
+// Convert data object to CSV
+    let data = [Object.keys(dataObj[0])].concat(data0bj).map(it => {
+        return Object.values(it).toString()
+    }). join('\n')
     
     // --- 3. Save to OSF via DataPipe (with retry) ---
     const participantId = expInfo["班別學號 (e.g., 1a01)"] || 'unknown';
