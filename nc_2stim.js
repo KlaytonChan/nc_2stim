@@ -1670,7 +1670,7 @@ function thankRoutineBegin(snapshot) {
     psychoJS._saveResults = 0;
     
     // Prepare CSV data
-    let filename = `data/${expInfo["班別學號 (e.g., 1a01)"]}_${expName}_${expInfo["date"]}`;
+    let filename = `data/${expInfo["班別學號 (e.g., 1a01)"]}_${expName}_${expInfo["date"]}.csv`;
     let allData = psychoJS.experiment._trialsData;
     if (allData.length > 0) {
       let headers = Object.keys(allData[0]);
@@ -1679,7 +1679,10 @@ function thankRoutineBegin(snapshot) {
       
       fetch('https://pipe.jpsych.org/api/data', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+            'Content-Type': 'application/json',
+            Accept: '∗/∗',
+        },
         body: JSON.stringify({
           experimentID: 'Pyz0Uh6L3iCs',
           filename: filename,
