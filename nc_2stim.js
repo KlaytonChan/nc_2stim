@@ -1677,7 +1677,7 @@ function thankRoutineBegin(snapshot) {
       let rows = allData.map(row => headers.map(h => row[h] || "").join(','));
       let csv = [headers.join(','), ...rows].join('\n');
       
-      fetch('https://pipe.jpsych.org/api/data/', {
+      fetch('https://pipe.jspsych.org/api/data/', {
         method: 'POST',
         headers: { 
             'Content-Type': 'application/json',
