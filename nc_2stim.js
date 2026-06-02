@@ -1666,32 +1666,117 @@ function thankRoutineBegin(snapshot) {
   return async function () {
     TrialHandler.fromSnapshot(snapshot);
     
-    // Disable automatic browser download
-    psychoJS._saveResults = 0;
+    // --- 1. Collect all experiment data properly ---
+    let allData = [];
     
-    // Prepare CSV data
-    let filename = `data/${expInfo["班別學號 (e.g., 1a01)"]}_${expName}_${expInfo["date"]}.csv`;
-    let allData = psychoJS.experiment._trialsData;
-    if (allData.length > 0) {
-      let headers = Object.keys(allData[0]);
-      let rows = allData.map(row => headers.map(h => row[h] || "").join(','));
-      let csv = [headers.join(','), ...rows].join('\n');
-      
-      fetch('https://pipe.jspsych.org/api/data/', {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            Accept: '*/*',
-        },
-        body: JSON.stringify({
-          experimentID: 'Pyz0Uh6L3iCs',
-          filename: filename,
-          data: csv,
-        }),
-      }).catch(err => console.error("Data upload failed", err));
+    // Method 1: Use the official getTrialData() method
+    if (typeof psychoJS.experiment.getTrialData === 'function') {
+      allData = psychoJS.experiment.getTrialData();
     }
     
-    // --- Original routine setup (keep unchanged) ---
+    // Method 2: If getTrialData returns empty, try the internal _trialsData
+    if (allData.length === 0 && psychoJS.experiment._trialsData) {
+      allData = psychoJS.experiment._trialsData;
+    }
+    
+    // Method 3: Manually collect data from loops (preloop and testloop)
+    // This ensures we get all trial data even if the experiment state is odd
+    if (allData.length === 0) {
+      console.warn("No data from experiment methods, collecting from loops manually.");
+      // Collect from preloop
+      if (typeof preloop !== 'undefined' && preloop.trialList) {
+        for (let i = 0; i < preloop.trialList.length; i++) {
+          let trialData = preloop.trialList[i];
+          // Add any additional data recorded during the trial (like reaction times)
+          // You would need to store those in a global array during preRoutineEnd.
+          allData.push(trialData);
+        }
+      }
+      // Similarly for testloop
+      if (typeof testloop !== 'undefined' && testloop.trialList) {
+        for (let i = 0; i < testloop.trialList.length; i++) {
+          allData.push(testloop.trialList[i]);
+        }
+      }
+    }
+    
+    // If still empty, create a minimal record with at least the participant info
+    if (allData.length === 0) {
+      console.error("CRITICAL: No trial data found. Saving empty placeholder.");
+      allData = [{
+        "班別學號 (e.g., 1a01)": expInfo["班別學號 (e.g., 1a01)"],
+        "date": expInfo["date"],
+        "expName": expName,
+        "error": "No trial data recorded"
+      }];
+    }
+    
+    // --- 2. Convert to CSV ---
+    const headers = Object.keys(allData[0]);
+    const csvRows = [];
+    csvRows.push(headers.join(','));
+    for (const row of allData) {
+      const values = headers.map(header => {
+        let val = row[header];
+        if (val === undefined || val === null) val = '';
+        // Escape commas and quotes
+        if (typeof val === 'string') {
+          val = val.replace(/"/g, '""');
+          if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+            val = `"${val}"`;
+          }
+        }
+        return val;
+      });
+      csvRows.push(values.join(','));
+    }
+    const csvData = csvRows.join('\n');
+    
+    // --- 3. Save to OSF via DataPipe (with retry) ---
+    const participantId = expInfo["班別學號 (e.g., 1a01)"] || 'unknown';
+    const filename = `data/${participantId}_${expName}_${expInfo["date"]}.csv`;
+    
+    let uploaded = false;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const response = await fetch('https://pipe.jspsych.org/api/data/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': '*/*'
+          },
+          body: JSON.stringify({
+            experimentID: 'Pyz0Uh6L3iCs',
+            filename: filename,
+            data: csvData
+          })
+        });
+        if (response.ok) {
+          console.log(`✅ DataPipe upload successful on attempt ${attempt}`);
+          uploaded = true;
+          break;
+        } else {
+          console.warn(`Attempt ${attempt} failed: ${response.status}`);
+        }
+      } catch (err) {
+        console.warn(`Attempt ${attempt} error:`, err);
+        if (attempt === 3) throw err;
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+    if (!uploaded) {
+      console.error('All upload attempts failed. Data not sent to OSF.');
+      // Fallback: trigger local download
+      const blob = new Blob([csvData], { type: 'text/csv' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(blob);
+      console.log('💾 Local fallback download triggered.');
+    }
+    
+    // --- 4. Run the thank you routine (unchanged) ---
     t = 0;
     frameN = -1;
     continueRoutine = true;
@@ -1703,11 +1788,11 @@ function thankRoutineBegin(snapshot) {
     thankMaxDuration = null;
     thankComponents = [];
     thankComponents.push(introtext_3);
-    for (const thisComponent of thankComponents)
-      if ('status' in thisComponent)
-        thisComponent.status = PsychoJS.Status.NOT_STARTED;
+    for (const comp of thankComponents) {
+      if (comp && 'status' in comp) comp.status = PsychoJS.Status.NOT_STARTED;
+    }
     return Scheduler.Event.NEXT;
-  }
+  };
 }
 
 function thankRoutineEachFrame() {
