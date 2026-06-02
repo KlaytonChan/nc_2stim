@@ -72,7 +72,7 @@ flowScheduler.add(testloopLoopEnd);
 
 
 
-flowScheduler.add(());
+flowScheduler.add(thankRoutineBegin());
 flowScheduler.add(thankRoutineEachFrame());
 flowScheduler.add(thankRoutineEnd());
 flowScheduler.add(quitPsychoJS, 'Thank you for your patience.', true);
