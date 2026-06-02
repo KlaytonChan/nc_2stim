@@ -1664,24 +1664,42 @@ var thankMaxDuration;
 var thankComponents;
 function thankRoutineBegin(snapshot) {
   return async function () {
-    TrialHandler.fromSnapshot(snapshot); // ensure that .thisN vals are up to date
+    TrialHandler.fromSnapshot(snapshot);
     
-    //--- Prepare to start Routine 'thank' ---
+    // Disable automatic browser download
+    psychoJS._saveResults = 0;
+    
+    // Prepare CSV data
+    let filename = `data/${expInfo["班別學號 (e.g., 1a01)"]}_${expName}_${expInfo["date"]}`;
+    let allData = psychoJS.experiment._trialsData;
+    if (allData.length > 0) {
+      let headers = Object.keys(allData[0]);
+      let rows = allData.map(row => headers.map(h => row[h] || "").join(','));
+      let csv = [headers.join(','), ...rows].join('\n');
+      
+      fetch('https://pipe.jpsych.org/api/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          experimentID: 'Pyz0Uh6L3iCs',
+          filename: filename,
+          data: csv,
+        }),
+      }).catch(err => console.error("Data upload failed", err));
+    }
+    
+    // --- Original routine setup (keep unchanged) ---
     t = 0;
     frameN = -1;
-    continueRoutine = true; // until we're told otherwise
-    // keep track of whether this Routine was forcibly ended
+    continueRoutine = true;
     routineForceEnded = false;
     thankClock.reset(routineTimer.getTime());
     routineTimer.add(10.000000);
     thankMaxDurationReached = false;
-    // update component parameters for each repeat
     psychoJS.experiment.addData('thank.started', globalClock.getTime());
-    thankMaxDuration = null
-    // keep track of which components have finished
+    thankMaxDuration = null;
     thankComponents = [];
     thankComponents.push(introtext_3);
-    
     for (const thisComponent of thankComponents)
       if ('status' in thisComponent)
         thisComponent.status = PsychoJS.Status.NOT_STARTED;
