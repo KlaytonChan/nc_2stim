@@ -1805,11 +1805,10 @@ function thankRoutineEachFrame() {
     
     // *introtext_3* updates
     if (t >= 0.0 && introtext_3.status === PsychoJS.Status.NOT_STARTED) {
-      // keep track of start time/frame for later
-      introtext_3.tStart = t;  // (not accounting for frame time here)
-      introtext_3.frameNStart = frameN;  // exact frame index
-      
-      introtext_3.setAutoDraw(true);
+        introtext_3.tStart = t;
+        introtext_3.frameNStart = frameN;
+        introtext_3.setAutoDraw(true);
+        introtext_3.status = PsychoJS.Status.STARTED;   // 👈 add this line
     }
     
     
