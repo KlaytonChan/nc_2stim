@@ -72,7 +72,7 @@ flowScheduler.add(testloopLoopEnd);
 
 
 
-flowScheduler.add(thankRoutineBegin());
+flowScheduler.add(());
 flowScheduler.add(thankRoutineEachFrame());
 flowScheduler.add(thankRoutineEnd());
 flowScheduler.add(quitPsychoJS, 'Thank you for your patience.', true);
@@ -1665,100 +1665,104 @@ var thankComponents;
 function thankRoutineBegin(snapshot) {
   return async function () {
     TrialHandler.fromSnapshot(snapshot);
-    
-    // Disable automatic browser download (optional)
-    psychoJS._saveResults = 0;
-    
-    // --- Helper: Convert experiment data to CSV ---
-    function getExperimentData() {
-      // Try to get data from the ExperimentHandler
-      let allData = [];
-      
-      // Method 1: _trialsData (most common)
-      if (psychoJS.experiment._trialsData && psychoJS.experiment._trialsData.length > 0) {
-        allData = psychoJS.experiment._trialsData;
+
+    // --------------------------------------------------------------
+    // 1. SAVE DATA (attempt DataPipe + provide local download)
+    // --------------------------------------------------------------
+    async function saveData() {
+      // Helper: convert experiment data to CSV
+      function getCSV() {
+        let allData = [];
+
+        // Try different places where PsychoJS stores trial data
+        if (psychoJS.experiment._trialsData && psychoJS.experiment._trialsData.length) {
+          allData = psychoJS.experiment._trialsData;
+        } else if (psychoJS.experiment._dataEntries && psychoJS.experiment._dataEntries.length) {
+          allData = psychoJS.experiment._dataEntries;
+        } else if (typeof psychoJS.experiment.getTrialData === 'function') {
+          allData = psychoJS.experiment.getTrialData();
+        }
+
+        if (allData.length === 0) {
+          console.warn('No trial data found – experiment may have recorded nothing.');
+          return null;
+        }
+
+        const headers = Object.keys(allData[0]);
+        const rows = allData.map(row =>
+          headers.map(h => JSON.stringify(row[h] || '')).join(',')
+        );
+        return [headers.join(','), ...rows].join('\n');
       }
-      // Method 2: _dataEntries (fallback)
-      else if (psychoJS.experiment._dataEntries && psychoJS.experiment._dataEntries.length > 0) {
-        allData = psychoJS.experiment._dataEntries;
-      }
-      // Method 3: getTrialData() if available
-      else if (typeof psychoJS.experiment.getTrialData === 'function') {
-        allData = psychoJS.experiment.getTrialData();
-      }
-      
-      if (allData.length === 0) {
-        console.warn('No trial data found. Check experiment data collection.');
-        return null;
-      }
-      
-      // Build CSV
-      const headers = Object.keys(allData[0]);
-      const rows = allData.map(row => 
-        headers.map(h => JSON.stringify(row[h] || '')).join(',')
-      );
-      return [headers.join(','), ...rows].join('\n');
-    }
-    
-    // --- Extract data ---
-    const csvData = getExperimentData();
-    if (!csvData) {
-      console.error('No data to save – experiment may have recorded nothing.');
-      // Still continue to show thank you screen
-    } else {
-      // Prepare filename
+
+      const csvData = getCSV();
+      if (!csvData) return;
+
       const participantId = expInfo["班別學號 (e.g., 1a01)"] || 'unknown';
       const filename = `data/${participantId}_${expName}_${expInfo["date"]}.csv`;
-      
-      console.log('Saving data to OSF via DataPipe...');
-      console.log(`Filename: ${filename}`);
-      console.log(`Data length: ${csvData.length} characters`);
-      
+
+      // ---- Option 1: DataPipe (OSF) ----
       try {
         const response = await fetch('https://pipe.jpsych.org/api/data', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': '*/*',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            experimentID: 'Pyz0Uh6L3iCs',  // your DataPipe experiment ID
+            experimentID: 'Pyz0Uh6L3iCs',
             filename: filename,
             data: csvData,
           }),
         });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        if (response.ok) {
+          console.log('✅ DataPipe upload successful');
+        } else {
+          console.error('❌ DataPipe upload failed:', response.status, response.statusText);
         }
-        
-        const result = await response.json();
-        console.log('DataPipe upload successful:', result);
-      } catch (error) {
-        console.error('Failed to save data to OSF:', error);
-        // Optionally alert the user, but do not break the experiment
+      } catch (err) {
+        console.error('❌ DataPipe network error:', err);
       }
+
+      // ---- Option 2: Local download (fallback) ----
+      const blob = new Blob([csvData], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      console.log('💾 Local CSV download triggered (fallback)');
     }
-    
-    // --- Original routine setup (unchanged) ---
+
+    // Run saveData() in the background – errors will NOT crash the routine
+    saveData().catch(err => console.error('Data saving error:', err));
+
+    // --------------------------------------------------------------
+    // 2. THANK YOU ROUTINE SETUP (ensure textbox appears)
+    // --------------------------------------------------------------
     t = 0;
     frameN = -1;
     continueRoutine = true;
     routineForceEnded = false;
     thankClock.reset(routineTimer.getTime());
-    routineTimer.add(10.000000);
+    routineTimer.add(10.0);          // show thank‑you for 10 seconds
     thankMaxDurationReached = false;
     psychoJS.experiment.addData('thank.started', globalClock.getTime());
     thankMaxDuration = null;
+
     thankComponents = [];
     thankComponents.push(introtext_3);
-    
-    for (const thisComponent of thankComponents) {
-      if ('status' in thisComponent) {
-        thisComponent.status = PsychoJS.Status.NOT_STARTED;
+
+    for (const comp of thankComponents) {
+      if (comp && typeof comp.status !== 'undefined') {
+        comp.status = PsychoJS.Status.NOT_STARTED;
       }
     }
-    
+
+    // Force the textbox to be drawn immediately (extra safety)
+    introtext_3.setAutoDraw(true);
+    introtext_3.status = PsychoJS.Status.STARTED;
+
     return Scheduler.Event.NEXT;
   };
 }
