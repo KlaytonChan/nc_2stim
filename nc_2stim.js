@@ -1666,10 +1666,19 @@ function thankRoutineBegin(snapshot) {
   return async function () {
     TrialHandler.fromSnapshot(snapshot);
     
-    // --- 1. Collect all experiment data properly ---
-    let dataObj = psychoJS._experiment._trialsData;
+    let allData = [];
+    
+    // Method 1: Use the official getTrialData() method
+    if (typeof psychoJS.experiment.getTrialData === 'function') {
+      allData = psychoJS.experiment.getTrialData();
+    }
+    
+    // Method 2: If getTrialData returns empty, try the internal _trialsData
+    if (allData.length === 0 && psychoJS.experiment._trialsData) {
+      allData = psychoJS.experiment._trialsData;
+    }
 // Convert data object to CSV
-    let data = [Object.keys(dataObj[0])].concat(data0bj).map(it => {
+    let data = [Object.keys(allData[0])].concat(allData).map(it => {
         return Object.values(it).toString()
     }). join('\n')
     
