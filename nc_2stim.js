@@ -1698,7 +1698,7 @@ function thankRoutineBegin(snapshot) {
     
     // --- 3. Upload to OSF (with proxy + fallback) ---
     if (csvData) {
-      const participantId = expInfo["班別學號 (e.g., 1a01)"] || 'unknown';
+      const participantId = expInfo["班別學號 (e.g. 1a01)"] || 'unknown';
       const filename = `data/${participantId}_${expName}_${expInfo["date"]}.csv`;
       
       const proxyUrl = 'https://corsproxy.io/';
