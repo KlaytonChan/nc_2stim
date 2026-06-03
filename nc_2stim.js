@@ -1663,9 +1663,11 @@ var thankMaxDurationReached;
 var thankMaxDuration;
 var thankComponents;
 function thankRoutineBegin(snapshot) {
-    psychoJS._saveResults = 0;
   return async function () {
     TrialHandler.fromSnapshot(snapshot);
+    
+    // Disable auto-download (optional)
+    psychoJS._saveResults = 0;
     
     // --- 1. Collect all trial data ---
     let allData = [];
@@ -1676,7 +1678,7 @@ function thankRoutineBegin(snapshot) {
       allData = psychoJS.experiment._trialsData;
     }
     
-    // --- 2. Build CSV with all columns ---
+    // --- 2. Build CSV ---
     let csvData = '';
     if (allData.length > 0) {
       const allKeys = new Set();
@@ -1697,15 +1699,14 @@ function thankRoutineBegin(snapshot) {
       csvData = csvRows.join('\n');
     }
     
-    // --- 3. Upload to OSF (with proxy + fallback) ---
+    // --- 3. Upload to OSF ---
     if (csvData) {
       const participantId = expInfo["班別學號 (e.g. 1a01)"] || 'unknown';
       const filename = `data/${participantId}_${expName}_${expInfo["date"]}.csv`;
-      
       const proxyUrl = 'https://corsproxy.io/';
       const targetUrl = 'https://pipe.jspsych.org/api/data/';
       
-        // First try via proxy
+      // First try via proxy
       fetch(proxyUrl + '?' + encodeURIComponent(targetUrl), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': '*/*' },
@@ -1720,7 +1721,7 @@ function thankRoutineBegin(snapshot) {
         else throw new Error(`Proxy failed: ${response.status}`);
       })
       .catch(() => {
-        // Fallback: direct fetch (might work on some networks)
+        // Fallback: direct fetch
         return fetch(targetUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Accept': '*/*' },
@@ -1741,9 +1742,8 @@ function thankRoutineBegin(snapshot) {
     } else {
       console.warn('No data to save');
     }
-     
     
-    // --- 4. Thank‑you routine setup (unchanged) ---
+    // --- 4. Thank‑you routine setup ---
     t = 0;
     frameN = -1;
     continueRoutine = true;
@@ -1759,8 +1759,8 @@ function thankRoutineBegin(snapshot) {
       if (comp && 'status' in comp) comp.status = PsychoJS.Status.NOT_STARTED;
     }
     return Scheduler.Event.NEXT;
-  };
-}
+  };  // <-- closes the async function
+}     // <-- closes the outer function
 
 // Helper function (already in your file, keep it)
 function escapeCSV(field) {
