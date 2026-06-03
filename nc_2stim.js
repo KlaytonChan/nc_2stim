@@ -1663,47 +1663,28 @@ var thankMaxDurationReached;
 var thankMaxDuration;
 var thankComponents;
 function thankRoutineBegin(snapshot) {
-    psychoJS._saveResults = 0;
-    
   return async function () {
     TrialHandler.fromSnapshot(snapshot);
     
     // --- 1. Collect all trial data ---
     let allData = [];
-    
-    // Try official method first
     if (typeof psychoJS.experiment.getTrialData === 'function') {
       allData = psychoJS.experiment.getTrialData();
     }
-    // Fallback to internal _trialsData
     if (allData.length === 0 && psychoJS.experiment._trialsData) {
       allData = psychoJS.experiment._trialsData;
     }
     
-    // If still empty, try to manually collect from loops (optional safeguard)
-    if (allData.length === 0) {
-      console.warn("No trial data found via standard methods.");
-      // You could add manual loop collection here if needed
-    }
-    
-    // --- 2. Build CSV with consistent columns ---
-    if (allData.length === 0) {
-      console.error("No data to save.");
-      // Still show thank you screen
-    } else {
-      // Get all unique column names from every row
+    // --- 2. Build CSV with all columns ---
+    let csvData = '';
+    if (allData.length > 0) {
       const allKeys = new Set();
       for (const row of allData) {
         Object.keys(row).forEach(key => allKeys.add(key));
       }
       const headers = Array.from(allKeys);
-      
-      // Create CSV rows
       const csvRows = [];
-      // Add header row
       csvRows.push(headers.map(h => escapeCSV(h)).join(','));
-      
-      // Add data rows
       for (const row of allData) {
         const values = headers.map(header => {
           let val = row[header];
@@ -1712,38 +1693,63 @@ function thankRoutineBegin(snapshot) {
         });
         csvRows.push(values.join(','));
       }
-      
-      const csvData = csvRows.join('\n');
-      
-      // --- 3. Save to OSF via DataPipe ---
-      // Fix: correct participant ID key (no comma inside)
-      const participantId = expInfo["班別學號 (e.g. 1a01)"] || 'unknown';
+      csvData = csvRows.join('\n');
+    }
+    
+    // --- 3. Upload to OSF (with proxy + fallback) ---
+    if (csvData) {
+      const participantId = expInfo["班別學號 (e.g., 1a01)"] || 'unknown';
       const filename = `data/${participantId}_${expName}_${expInfo["date"]}.csv`;
       
-      // Send to DataPipe (fire and forget, but catch errors)
-      fetch('https://pipe.jspsych.org/api/data/', {
+      const proxyUrl = 'https://corsproxy.io/';
+      const targetUrl = 'https://pipe.jspsych.org/api/data/';
+      
+      // First try via proxy
+      fetch(proxyUrl + '?' + encodeURIComponent(targetUrl), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': '*/*'
-        },
+        headers: { 'Content-Type': 'application/json', 'Accept': '*/*' },
         body: JSON.stringify({
           experimentID: 'Pyz0Uh6L3iCs',
           filename: filename,
           data: csvData
         })
-      }).catch(err => console.error("DataPipe upload failed:", err));
-      
-      // Optional: also trigger a local download as backup
-      const blob = new Blob([csvData], { type: 'text/csv' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = filename;
-      link.click();
-      URL.revokeObjectURL(blob);
+      })
+      .then(response => {
+        if (response.ok) console.log('✅ Data uploaded via proxy');
+        else throw new Error(`Proxy failed: ${response.status}`);
+      })
+      .catch(() => {
+        // Fallback: direct fetch (might work on some networks)
+        return fetch(targetUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': '*/*' },
+          body: JSON.stringify({
+            experimentID: 'Pyz0Uh6L3iCs',
+            filename: filename,
+            data: csvData
+          })
+        });
+      })
+      .then(response => {
+        if (response && !response.ok) throw new Error('Direct upload failed');
+        if (response && response.ok) console.log('✅ Data uploaded directly');
+      })
+      .catch(err => {
+        console.error('All upload attempts failed:', err);
+        // Last resort: local download
+        const blob = new Blob([csvData], { type: 'text/csv' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(blob);
+        alert('Upload failed. A CSV file has been downloaded – please send it to the experimenter.');
+      });
+    } else {
+      console.warn('No data to save');
     }
     
-    // --- 4. Run the thank‑you routine (unchanged) ---
+    // --- 4. Thank‑you routine setup (unchanged) ---
     t = 0;
     frameN = -1;
     continueRoutine = true;
@@ -1762,18 +1768,14 @@ function thankRoutineBegin(snapshot) {
   };
 }
 
-// Helper function to escape CSV fields
+// Helper function (already in your file, keep it)
 function escapeCSV(field) {
   if (typeof field === 'string') {
-    // If the field contains commas, newlines, or double quotes, wrap in double quotes and escape inner quotes
     if (field.includes(',') || field.includes('"') || field.includes('\n')) {
       field = field.replace(/"/g, '""');
       return `"${field}"`;
     }
     return field;
-  } else if (typeof field === 'object') {
-    // Convert objects to JSON string
-    return escapeCSV(JSON.stringify(field));
   }
   return String(field);
 }
