@@ -1678,7 +1678,7 @@ function thankRoutineBegin(snapshot) {
       allData = psychoJS.experiment._trialsData;
     }
 // Convert data object to CSV
-    let csvData = [Object.keys(allData[0])].concat(allData).map(it => {
+    let data = [Object.keys(allData[0])].concat(allData).map(it => {
         return Object.values(it).toString()
     }). join('\n')
     
@@ -1695,7 +1695,7 @@ function thankRoutineBegin(snapshot) {
           body: JSON.stringify({
             experimentID: 'Pyz0Uh6L3iCs',
             filename: filename,
-            data: csvData
+            data: data
           })
         });
         if (response.ok) {
