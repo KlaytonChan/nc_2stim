@@ -1663,6 +1663,7 @@ var thankMaxDurationReached;
 var thankMaxDuration;
 var thankComponents;
 function thankRoutineBegin(snapshot) {
+    psychoJS._saveResults = 0;
   return async function () {
     TrialHandler.fromSnapshot(snapshot);
     
