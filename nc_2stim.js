@@ -1683,7 +1683,7 @@ function thankRoutineBegin(snapshot) {
     }). join('\n')
     
     // --- 3. Save to OSF via DataPipe (with retry) ---
-    const participantId = expInfo["班別學號 (e.g., 1a01)"] || 'unknown';
+    const participantId = expInfo["班別學號 (e.g.',' 1a01)"] || 'unknown';
     const filename = `data/${participantId}_${expName}_${expInfo["date"]}.csv`;
     
     let uploaded = false;
