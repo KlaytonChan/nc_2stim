@@ -1731,24 +1731,7 @@ function thankRoutineBegin(snapshot) {
           })
         });
       })
-      .then(response => {
-        if (response && !response.ok) throw new Error('Direct upload failed');
-        if (response && response.ok) console.log('✅ Data uploaded directly');
-      })
-      .catch(err => {
-        console.error('All upload attempts failed:', err);
-        // Last resort: local download
-        const blob = new Blob([csvData], { type: 'text/csv' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = filename;
-        link.click();
-        URL.revokeObjectURL(blob);
-        alert('Upload failed. A CSV file has been downloaded – please send it to the experimenter.');
-      });
-    } else {
-      console.warn('No data to save');
-    }
+     
     
     // --- 4. Thank‑you routine setup (unchanged) ---
     t = 0;
