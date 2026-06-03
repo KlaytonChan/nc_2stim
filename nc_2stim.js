@@ -14,7 +14,7 @@ const { round } = util;
 // store info about the experiment session:
 let expName = 'nc_2stim';  // from the Builder filename that created this script
 let expInfo = {
-    '班別學號 (e.g., 1a01)': '',
+    '班別學號 (e.g. 1a01)': '',
 };
 let PILOTING = util.getUrlParameters().has('__pilotToken');
 
@@ -115,7 +115,7 @@ async function updateInfo() {
   
 
   
-  psychoJS.experiment.dataFileName = (("." + "/") + `data/${expInfo["\u73ed\u5225\u5b78\u865f (e.g., 1a01)"]}_${expName}_${expInfo["date"]}`);
+  psychoJS.experiment.dataFileName = (("." + "/") + `data/${expInfo["\u73ed\u5225\u5b78\u865f (e.g. 1a01)"]}_${expName}_${expInfo["date"]}`);
   psychoJS.experiment.field_separator = '\t';
 
 
@@ -1666,40 +1666,82 @@ function thankRoutineBegin(snapshot) {
   return async function () {
     TrialHandler.fromSnapshot(snapshot);
     
+    // --- 1. Collect all trial data ---
     let allData = [];
     
-    // Method 1: Use the official getTrialData() method
+    // Try official method first
     if (typeof psychoJS.experiment.getTrialData === 'function') {
       allData = psychoJS.experiment.getTrialData();
     }
-    
-    // Method 2: If getTrialData returns empty, try the internal _trialsData
+    // Fallback to internal _trialsData
     if (allData.length === 0 && psychoJS.experiment._trialsData) {
       allData = psychoJS.experiment._trialsData;
     }
-// Convert data object to CSV
-    let data = [Object.keys(allData[0])].concat(allData).map(it => {
-        return Object.values(it).toString()
-    }). join('\n')
     
-    // --- 3. Save to OSF via DataPipe (with retry) ---
-    const participantId = expInfo["班別學號 (e.g.',' 1a01)"] || 'unknown';
-    const filename = `data/${participantId}_${expName}_${expInfo["date"]}.csv`;
+    // If still empty, try to manually collect from loops (optional safeguard)
+    if (allData.length === 0) {
+      console.warn("No trial data found via standard methods.");
+      // You could add manual loop collection here if needed
+    }
     
-    fetch('https://pipe.jspsych.org/api/data/', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': '*/*'
-          },
-          body: JSON.stringify({
-            experimentID: 'Pyz0Uh6L3iCs',
-            filename: filename,
-            data: data
-          })
+    // --- 2. Build CSV with consistent columns ---
+    if (allData.length === 0) {
+      console.error("No data to save.");
+      // Still show thank you screen
+    } else {
+      // Get all unique column names from every row
+      const allKeys = new Set();
+      for (const row of allData) {
+        Object.keys(row).forEach(key => allKeys.add(key));
+      }
+      const headers = Array.from(allKeys);
+      
+      // Create CSV rows
+      const csvRows = [];
+      // Add header row
+      csvRows.push(headers.map(h => escapeCSV(h)).join(','));
+      
+      // Add data rows
+      for (const row of allData) {
+        const values = headers.map(header => {
+          let val = row[header];
+          if (val === undefined || val === null) val = '';
+          return escapeCSV(val);
+        });
+        csvRows.push(values.join(','));
+      }
+      
+      const csvData = csvRows.join('\n');
+      
+      // --- 3. Save to OSF via DataPipe ---
+      // Fix: correct participant ID key (no comma inside)
+      const participantId = expInfo["班別學號 (e.g. 1a01)"] || 'unknown';
+      const filename = `data/${participantId}_${expName}_${expInfo["date"]}.csv`;
+      
+      // Send to DataPipe (fire and forget, but catch errors)
+      fetch('https://pipe.jspsych.org/api/data/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': '*/*'
+        },
+        body: JSON.stringify({
+          experimentID: 'Pyz0Uh6L3iCs',
+          filename: filename,
+          data: csvData
         })
+      }).catch(err => console.error("DataPipe upload failed:", err));
+      
+      // Optional: also trigger a local download as backup
+      const blob = new Blob([csvData], { type: 'text/csv' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(blob);
+    }
     
-    // --- 4. Run the thank you routine (unchanged) ---
+    // --- 4. Run the thank‑you routine (unchanged) ---
     t = 0;
     frameN = -1;
     continueRoutine = true;
@@ -1716,6 +1758,22 @@ function thankRoutineBegin(snapshot) {
     }
     return Scheduler.Event.NEXT;
   };
+}
+
+// Helper function to escape CSV fields
+function escapeCSV(field) {
+  if (typeof field === 'string') {
+    // If the field contains commas, newlines, or double quotes, wrap in double quotes and escape inner quotes
+    if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+      field = field.replace(/"/g, '""');
+      return `"${field}"`;
+    }
+    return field;
+  } else if (typeof field === 'object') {
+    // Convert objects to JSON string
+    return escapeCSV(JSON.stringify(field));
+  }
+  return String(field);
 }
 
 function thankRoutineEachFrame() {
