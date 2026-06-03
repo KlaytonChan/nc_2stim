@@ -1697,31 +1697,7 @@ function thankRoutineBegin(snapshot) {
             filename: filename,
             data: data
           })
-        });
-        if (response.ok) {
-          console.log(`✅ DataPipe upload successful on attempt ${attempt}`);
-          uploaded = true;
-          break;
-        } else {
-          console.warn(`Attempt ${attempt} failed: ${response.status}`);
-        }
-      } catch (err) {
-        console.warn(`Attempt ${attempt} error:`, err);
-        if (attempt === 3) throw err;
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-    }
-    if (!uploaded) {
-      console.error('All upload attempts failed. Data not sent to OSF.');
-      // Fallback: trigger local download
-      const blob = new Blob([csvData], { type: 'text/csv' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = filename;
-      link.click();
-      URL.revokeObjectURL(blob);
-      console.log('💾 Local fallback download triggered.');
-    }
+        })
     
     // --- 4. Run the thank you routine (unchanged) ---
     t = 0;
