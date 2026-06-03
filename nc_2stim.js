@@ -1678,7 +1678,7 @@ function thankRoutineBegin(snapshot) {
       allData = psychoJS.experiment._trialsData;
     }
 // Convert data object to CSV
-    let data = [Object.keys(allData[0])].concat(allData).map(it => {
+    let csvData = [Object.keys(allData[0])].concat(allData).map(it => {
         return Object.values(it).toString()
     }). join('\n')
     
@@ -1686,10 +1686,7 @@ function thankRoutineBegin(snapshot) {
     const participantId = expInfo["班別學號 (e.g.',' 1a01)"] || 'unknown';
     const filename = `data/${participantId}_${expName}_${expInfo["date"]}.csv`;
     
-    let uploaded = false;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        const response = await fetch('https://pipe.jspsych.org/api/data/', {
+    fetch('https://pipe.jspsych.org/api/data/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
