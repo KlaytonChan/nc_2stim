@@ -1705,7 +1705,7 @@ function thankRoutineBegin(snapshot) {
       const proxyUrl = 'https://corsproxy.io/';
       const targetUrl = 'https://pipe.jspsych.org/api/data/';
       
-      // First try via proxy
+        // First try via proxy
       fetch(proxyUrl + '?' + encodeURIComponent(targetUrl), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': '*/*' },
@@ -1731,6 +1731,16 @@ function thankRoutineBegin(snapshot) {
           })
         });
       })
+      .then(response => {
+        if (response && !response.ok) throw new Error('Direct upload failed');
+        if (response && response.ok) console.log('✅ Data uploaded directly');
+      })
+      .catch(err => {
+        console.error('All upload attempts failed:', err);
+      });
+    } else {
+      console.warn('No data to save');
+    }
      
     
     // --- 4. Thank‑you routine setup (unchanged) ---
