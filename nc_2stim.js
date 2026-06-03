@@ -1665,7 +1665,7 @@ var thankComponents;
 function thankRoutineBegin(snapshot) {
   return async function () {
     TrialHandler.fromSnapshot(snapshot);
-    
+    psychoJS._saveResults = 0;
     // --- 1. Collect all trial data ---
     let allData = [];
     
