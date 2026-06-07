@@ -288,7 +288,7 @@ async function experimentInit() {
     text: '',
     font: 'Noto Sans TC',
     pos: [(- 0.3), 0],
-    size: [1, 1],
+    size: [7, 1],
     padding: null,
     anchor: 'center',
     ori: 0.0,
