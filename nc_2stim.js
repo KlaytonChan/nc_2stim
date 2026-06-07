@@ -324,7 +324,7 @@ async function experimentInit() {
     borderWidth: 0,
     opacity: null,
     depth: -3,
-    letterHeight: 0.05,
+    letterHeight: 0.1,
     bold: false,
     italic: false,
   });
