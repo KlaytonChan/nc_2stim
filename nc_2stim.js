@@ -318,7 +318,7 @@ async function experimentInit() {
     ori: 0.0,
     units: psychoJS.window.units,
     color: 'black',
-    fillColor: null,
+    fillColor: 'blue',
     borderColor: null,
     colorSpace: 'rgb',
     borderWidth: 0,
