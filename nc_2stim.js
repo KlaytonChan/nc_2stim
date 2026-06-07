@@ -289,14 +289,7 @@ async function experimentInit() {
     font: 'Noto Sans TC',
     pos: [(- 0.3), 0],
     size: [0.5, 6],
-    height: this._fitToContent 
-	? "auto"
-	: (this._multiline || this instanceof ButtonStim)
-	? `${1}px`
-	: undefined,
-	width: this._fitToContent ? "auto" : `${width_px}px`,
-	maxWidth: `${this.win.size[0]}px`,
-	maxHeight: `${this.win.size[1]}px`,  
+	height: [1],
     padding: null,
     anchor: 'center',
     ori: 0.0,
